@@ -42,12 +42,16 @@ e.g
 
 requirement:
 
-1. Stanford CoreNLP
++ Stanford CoreNLP
 2. Stnaford CoreNLP Chinese Package
 3. Python3+
 4. Java 1.8+
++
 
 ```bash
+$ pip install stanfordcorenlp
+$ pip install bottle
+$ java -Xmx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -serverProperties StanfordCoreNLP-chinese.properties -port 9000 -timeout 15000
 $ python find_quotes_server.py
 ```
 
