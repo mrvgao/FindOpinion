@@ -47,7 +47,9 @@ requirement:
 3. Python3+
 4. Java 1.8+
 
-
+```bash
+$ python find_quotes_server.py
+```
 
 
 
