@@ -5,7 +5,7 @@ spoken_clost_words = {}
 
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
 
-with open('spoken_close_words.txt', encoding='utf-8') as f:
+with open('data/spoken_close_words.txt', encoding='utf-8') as f:
     for line in f:
         w, p = line.split()
         spoken_clost_words[w] = float(p)
@@ -204,7 +204,15 @@ def extract_speech_from_words(words_and_tags):
         if len(s) < 3: return True
         return False
 
-    results = [(w, ''.join(s)) for w, s in results if not is_long_special_string(s)]
+    def strip(string):
+        new_s = ""
+        for s in string:
+            if new_s == "" and not str(s).isalnum(): continue
+            new_s += s
+
+        return new_s
+
+    results = [(w, strip(''.join(s))) for w, s in results if not is_long_special_string(s)]
 
     return results
 
@@ -294,9 +302,12 @@ def get_an_article_speech(article):
     for r in results:
         print(r)
 
+    return results
+
 
 if __name__ == '__main__':
     articles = [line.replace(r'\n', '。') for line in open('test_article.txt', encoding='utf-8')]
+
     for ii, a in enumerate(articles):
         print('-----------{}----------'.format(ii))
         article = ''.join(a)

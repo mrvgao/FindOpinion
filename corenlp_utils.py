@@ -8,7 +8,6 @@ nlp = StanfordCoreNLP('http://127.0.0.1', port=9000, lang='zh')
 self_defined_organizations = [org.strip() for org in open('data/organizations.txt', encoding='utf-8')]
 
 
-
 def find_person_entities(text):
     result = get_ner(text)
     return [
