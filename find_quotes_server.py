@@ -6,12 +6,18 @@ from format_parser import get_an_article_speech
 def get_article_quotes():
     content = request.forms.content
     result = get_an_article_speech(content)
-    # return {
-    #     'result': [
-    #         {'entity': None, 'quote': None, 'confidence': None}
-    #     ]
-    # }
+    result = format_http_return_value(result)
+
     return {'result': result}
+
+
+def format_http_return_value(results):
+    results = [
+        {'entity': n, 'verb': v, 'speech': s, 'confidence': c} for n, v, s, c in results
+    ]
+
+    return results
+
 
 
 run(host='localhost', port=9999, reloader=True)

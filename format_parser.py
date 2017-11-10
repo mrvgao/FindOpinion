@@ -49,18 +49,18 @@ class Tagger:
         self.__end_speech = '-EOS-'
         self.__unknown = '<UNK>'
 
-    def spoken_tag(self, word=None):
+    def spoken_tag(self, word=None, verb=None):
         if word is None:
             word = self.__unknown
             word += str(Tagger.unknown_index)
             Tagger.unknown_index += 1
-        return word, self.__spoken_tag
+        return word, self.__spoken_tag, verb
 
-    def end_speech(self, word=None):
+    def end_speech(self, word=None, verb=None):
         if word is None:
             word = self.__unknown
             word += str(Tagger.unknown_index)
-        return word, self.__end_speech
+        return word, self.__end_speech, verb
 
     def is_unknown_start_mark(self, w, t):
         return str(w).startswith(self.__unknown) and t == self.__spoken_tag
@@ -90,14 +90,14 @@ def find_quotes_format(words_and_tags):
     tagger = Tagger()
     results = []
 
-    for w, t in words_and_tags:
+    for w, t, v in words_and_tags:
         if is_quote(w) and not find_start:
             results.append(tagger.spoken_tag())
             find_start = True
         elif is_quote(w) and find_start:
             results.append(tagger.end_speech())
             find_start = False
-        results.append((w, t))
+        results.append((w, t, v))
 
     return results
 
@@ -137,7 +137,7 @@ def analysis_sub_string_object_speak_format(substring):
     find_speak_v = False
 
     for w, t in substring:
-        results.append((w, t))
+        results.append((w, t, ''))
 
         if first_entity_index < 0 or first_verb_index < 0: continue
 
@@ -145,7 +145,7 @@ def analysis_sub_string_object_speak_format(substring):
 
         if t == 'V' and find_subject and not find_speak_v:
             find_speak_v = True
-            results.append(tagger.spoken_tag(subject))
+            results.append(tagger.spoken_tag(word=subject, verb=w))
 
     return results
 
@@ -156,15 +156,15 @@ def add_end_of_speech_of_each_speech(words_and_tags):
     results = []
 
     subject = None
-    for w, t in words_and_tags:
-        results.append((w, t))
+    for w, t, v in words_and_tags:
+        results.append((w, t, v))
         if t == tagger.spoken_tag()[1]:
             need_find_end_of_speech = True
             subject = w
 
         # TODO : Need merge split sentences into one speech sentence
         if need_find_end_of_speech and is_sentence_end(w):
-            results.append(tagger.end_speech(subject))
+            results.append(tagger.end_speech(subject, verb=None))
             need_find_end_of_speech = False
 
     return results
@@ -189,15 +189,15 @@ def find_object_speak_format(words_and_tags):
 def extract_speech_from_words(words_and_tags):
     tagger = Tagger()
     results = []
-    for ii, w_t in enumerate(words_and_tags):
-        w, t = w_t
+    for ii, w_t_v in enumerate(words_and_tags):
+        w, t, v = w_t_v
         if t == tagger.spoken_tag()[1]:  # it's speech start flag.
             speech = []
-            for w2, t2 in words_and_tags[ii+1:]:
+            for w2, t2, v2 in words_and_tags[ii+1:]:
                 if w2 == w and t2 == tagger.end_speech()[1]: break # it's speech end flag.
                 elif t2 == tagger.end_speech()[1] or t2 == tagger.spoken_tag()[1]: continue
                 speech.append(w2)
-            results.append((w, speech))
+            results.append((w, speech, v))
 
     def is_long_special_string(s):
         if is_quote(s[0]) and len(s) <= 6: return True
@@ -212,7 +212,7 @@ def extract_speech_from_words(words_and_tags):
 
         return new_s
 
-    results = [(w, strip(''.join(s))) for w, s in results if not is_long_special_string(s)]
+    results = [(w, v, strip(''.join(s))) for w, s, v in results if not is_long_special_string(s)]
 
     return results
 
@@ -231,12 +231,15 @@ def find_s_v_structure(words_and_tags, direction='right'):
     entity_records = []
     find_subject = False
 
-    for w, t in words_and_tags:
+    verb = None
+
+    for w, t, _ in words_and_tags:
         if is_sentence_end(w): break
 
         if t in target_structure:
             find_structure = append_word(t, find_structure)
             if t == 'E': entity_records.append(w)
+            if t == 'V': verb = w
             if find_structure[len(find_structure)-1] != target_structure[len(find_structure)-1]:
                 break
 
@@ -247,9 +250,9 @@ def find_s_v_structure(words_and_tags, direction='right'):
     if find_subject:
         if direction == 'left':
             entity_records.reverse()
-        return ''.join(entity_records)
+        return ''.join(entity_records), verb
     else:
-        return None
+        return None, verb
 
 
 def find_quote_subject(words_and_tags):
@@ -258,29 +261,30 @@ def find_quote_subject(words_and_tags):
     unknown_index_real_subject_map = {}
 
     for ii, w_t in enumerate(words_and_tags):
-        w, t = w_t
+        w, t, v = w_t
         if tagger.is_unknown_start_mark(w, t):
-            subject = find_s_v_structure(words_and_tags[:ii][::-1], direction='left')
+            subject, verb = find_s_v_structure(words_and_tags[:ii][::-1], direction='left')
 
             if subject is not None:
-                unknown_index_real_subject_map[w] = subject
+                unknown_index_real_subject_map[w] = (subject, verb)
             else:  # not find subject before quote
-                for jj, w2_t2 in enumerate(words_and_tags[ii:]):
-                    w2, t2 = w2_t2
+                for jj, w2_t2_v2 in enumerate(words_and_tags[ii:]):
+                    w2, t2, v2 = w2_t2_v2
                     if tagger.is_unknown_end_mark(w2, t2) and w2 == w:
                         subject = find_s_v_structure(words_and_tags[ii+jj:], direction='right')
                         if subject is not None:
-                            unknown_index_real_subject_map[w] = subject
+                            unknown_index_real_subject_map[w] = (subject, v2)
                             break
 
-    words_and_tags = [list((w, t)) for w, t in words_and_tags]
+    words_and_tags = list(map(list, words_and_tags))
 
     for index in range(len(words_and_tags)):
         word = words_and_tags[index][0]
         if word in unknown_index_real_subject_map:
-            words_and_tags[index][0] = unknown_index_real_subject_map[word]
+            words_and_tags[index][0] = unknown_index_real_subject_map[word][0]
+            words_and_tags[index][2] = unknown_index_real_subject_map[word][1]  # set verb
 
-    words_and_tags = [(w, t) for w, t in words_and_tags if not tagger.is_unknown_mark(w)]
+    words_and_tags = [(w, t, v) for w, t, v in words_and_tags if not tagger.is_unknown_mark(w)]
 
     return words_and_tags
 
@@ -299,10 +303,24 @@ def get_an_article_speech(article):
     quote_format_with_subject = find_quote_subject(quote_format)
 
     results = extract_speech_from_words(quote_format_with_subject)
+
+    results = calculate_confidence(results)
+
     for r in results:
         print(r)
 
     return results
+
+
+def calculate_confidence(results):
+    max_pro_verb = max(spoken_clost_words.values())
+
+    def confidence(verb): return spoken_clost_words[verb] / max_pro_verb
+
+    return [
+        (name, verb, speech, confidence(verb))
+        for name, verb, speech in results
+    ]
 
 
 if __name__ == '__main__':
