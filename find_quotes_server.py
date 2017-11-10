@@ -6,6 +6,11 @@ from format_parser import get_an_article_speech
 def get_article_quotes():
     content = request.forms.content
     result = get_an_article_speech(content)
+    # return {
+    #     'result': [
+    #         {'entity': None, 'quote': None, 'confidence': None}
+    #     ]
+    # }
     return {'result': result}
 
 
