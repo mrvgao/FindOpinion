@@ -43,10 +43,10 @@ e.g
 requirement:
 
 + Stanford CoreNLP
-2. Stnaford CoreNLP Chinese Package
-3. Python3+
-4. Java 1.8+
-+
++ Stnaford CoreNLP Chinese Package
++ Python3+
++ Java 1.8+
+
 
 ```bash
 $ pip install stanfordcorenlp
