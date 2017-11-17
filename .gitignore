@@ -4,3 +4,6 @@
 __pycache__/corenlp_utils.cpython-36.pyc __pycache__/format_parser.cpython-36.pyc __pycache__/structure_parser.cpython-36.pyc __pycache__/word_cutter.cpython-36.pyc
 __pycache__/corenlp_utils.cpython-36.pyc __pycache__/format_parser.cpython-36.pyc __pycache__/structure_parser.cpython-36.pyc __pycache__/word_cutter.cpython-36.pyc
 */*.pyc
+data/test.txt
+data/344270273350257255346265213350257225.txt
+data/\344\270\273\350\257\255\346\265\213\350\257\225.txt
