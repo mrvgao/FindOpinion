@@ -1,5 +1,6 @@
 from corenlp_utils import get_pos_tag, find_person_entities
 from functools import reduce
+from structure_parser import find_subject
 
 spoken_clost_words = {}
 
@@ -304,10 +305,29 @@ def get_an_article_speech(article):
 
     results = extract_speech_from_words(quote_format_with_subject)
 
+    results = remove_not_predicate_words(results)
+
     results = calculate_confidence(results)
 
     for r in results:
         print(r)
+
+    return results
+
+
+def remove_not_predicate_words(results):
+    """
+    Some string like "表示了复杂的心情"， 等并不是表示态度的。 所以需要过滤掉。
+    过滤的时候， 用的是Dependency paring的方式。
+    :param results:
+    :return:
+    """
+
+    def find_spoker(string, predicate):
+        subjects = find_subject(string, predicate)
+        return subjects[0][2] if subjects else None
+
+    results = filter(lambda s_p_o: find_spoker("".join(s_p_o), s_p_o[1]) is not None, results)
 
     return results
 

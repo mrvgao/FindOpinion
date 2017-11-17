@@ -36,7 +36,7 @@ def get_text_dependency_parser_result(text, target_relations=[], verbose=False):
     dependency_result = nlp.dependency_parse(text)
     results = []
     for r, w1, w2 in dependency_result:
-        if verbose: print(r, w1, w2)
+        if verbose: print(r, tokens[w1-1], tokens[w2-1])
         if target_relations != [] and r not in target_relations: continue
         entity_1 = tokens[w1-1] if w1 > 0 else 'None'
         results.append((r, entity_1, tokens[w2-1]))

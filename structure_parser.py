@@ -13,7 +13,7 @@ def find_subject(text, predict=None, verbose=False):
     results = get_text_dependency_parser_result(text, target_relations, verbose=verbose)
 
     # if ('aux:asp', predict, *) in results
-    if list(filter(lambda r_p__: r_p__[0] == auxiliarity and r_p__[1] == predict, results)):
+    if len(list(filter(lambda r_p__: r_p__[0] == auxiliarity and r_p__[1] in predict, results))) > 0:
         return None
     elif predict:
         return [e for e in results if e[1] in predict]
@@ -22,7 +22,7 @@ def find_subject(text, predict=None, verbose=False):
 
 
 if __name__ == '__main__':
-    lines = list(open('data/主语测试.txt', encoding='utf-8'))
+    lines = list(open('data/subject_test.txt', encoding='utf-8'))
     for line in lines[:]:
         predict = line.split()[0]
         text = ''.join(line.split()[1:])
@@ -35,16 +35,4 @@ if __name__ == '__main__':
 
         print('*'*10)
 
-    print('*'*88)
-    for line in lines[:]:
-        predict = line.split()[0]
-        text = ''.join(line.split()[1:])
-        subject = find_subject(text, verbose=False)
-
-        print(text)
-
-        if subject: print('动作的发出者: ' + subject[0][2])
-        else: print('None')
-
-        print('*'*10)
 
