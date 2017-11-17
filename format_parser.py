@@ -1,21 +1,17 @@
 from corenlp_utils import get_pos_tag, find_person_entities
 from functools import reduce
+from itertools import product
+import structure_parser
 
-spoken_clost_words = {}
+spoken_closet_words = {}
 
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
 
 with open('data/spoken_close_words.txt', encoding='utf-8') as f:
     for line in f:
         w, p = line.split()
-        spoken_clost_words[w] = float(p)
-
-
-def is_spoken_word(word, pos, clost_dict):
-    if pos.startswith('V') and word in clost_dict:
-        return True
-    else:
-        return False
+        if w.startswith('#'):continue
+        spoken_closet_words[w] = float(p)
 
 
 def locate_person_and_spoken_verb(article, output_format='list'):
@@ -24,7 +20,7 @@ def locate_person_and_spoken_verb(article, output_format='list'):
 
     words = []
     for w, tag in pos_tag:
-        if is_spoken_word(w, tag, spoken_clost_words):
+        if w in spoken_closet_words and tag.startswith('V'):
             words.append((w, 'V'))
         elif w in persons or tag == 'NR' and w not in self_excluded_entities:
             words.append((w, 'E'))
@@ -82,7 +78,7 @@ def is_quote(w):
 
 
 def is_sentence_end(w):
-    return w in ['。', '！', '？', '.', '?', '!']
+    return w in ['。', '！', '？', '.', '?', '!', ' ']
 
 
 def find_quotes_format(words_and_tags):
@@ -118,34 +114,44 @@ def split_words_and_tags_to_subsentence(words_and_tags):
 
 
 def analysis_sub_string_object_speak_format(substring):
-    tags = [t if t != '' else '_' for w, t in substring if str.isalnum(w)]
+    tags = [t if t != '' else '_' for w, t in substring]
+    words = [w for w, t in substring]
 
-    first_entity_index = -1
-    if 'E' in tags: first_entity_index = tags.index('E')
-    if 'V' in tags[first_entity_index:]:
-        first_verb_index = tags.index('V')
-    else:
-        first_verb_index = -1
+    def find_indices(L, element): return [i for i, e in enumerate(L) if e == element]
 
-    subject = None
+    text = "".join([w for w, t in substring])
+    s_v_structure = structure_parser.find_subject(text)
 
-    find_subject = False
+    found_subject, found_predicate = None, None
+    subject_index, predicate_index = None, None
+
+    def find_entity_and_verb(_subject_indices, _predicate_indices):
+        for s_i, p_i in product(_subject_indices, _predicate_indices):
+            if tags[s_i] == 'E' and tags[p_i].startswith('V') and words[p_i] in spoken_closet_words:
+                global subject_index, predicate_index
+                global found_subject, found_predicate
+                subject_index, predicate_index = s_i, p_i
+                found_subject, found_predicate = words[s_i], words[p_i]
+                return found_subject, found_predicate
+        return None, None
+
+    for relation, predicate, subject in s_v_structure:
+        predicate_indices = find_indices(words, predicate)
+        subject_indices = find_indices(words, subject)
+
+        entity, predict = find_entity_and_verb(subject_indices, predicate_indices)
+
+        if entity and predict: break
 
     results = []
     tagger = Tagger()
 
-    find_speak_v = False
-
+    index = 0
     for w, t in substring:
         results.append((w, t, ''))
 
-        if first_entity_index < 0 or first_verb_index < 0: continue
-
-        if t == 'E' and not find_speak_v: subject = w; find_subject = True
-
-        if t == 'V' and find_subject and not find_speak_v:
-            find_speak_v = True
-            results.append(tagger.spoken_tag(word=subject, verb=w))
+        if index == predicate_index:
+            results.append(tagger.spoken_tag(word=found_subject, verb=found_predicate))
 
     return results
 
@@ -238,6 +244,7 @@ def find_s_v_structure(words_and_tags, direction='right'):
 
         if t in target_structure:
             find_structure = append_word(t, find_structure)
+            # TODO find subject is wrong here, need use
             if t == 'E': entity_records.append(w)
             if t == 'V': verb = w
             if find_structure[len(find_structure)-1] != target_structure[len(find_structure)-1]:
@@ -313,9 +320,9 @@ def get_an_article_speech(article):
 
 
 def calculate_confidence(results):
-    max_pro_verb = max(spoken_clost_words.values())
+    max_pro_verb = max(spoken_closet_words.values())
 
-    def confidence(verb): return spoken_clost_words[verb] / max_pro_verb
+    def confidence(verb): return spoken_closet_words[verb] / max_pro_verb
 
     return [
         (name, verb, speech, confidence(verb))
