@@ -1,2 +1,4 @@
 .idea/*
 .ipynb_checkpoints/*
+__pycache__/corenlp_utils.cpython-36.pyc __pycache__/format_parser.cpython-36.pyc __pycache__/word_cutter.cpython-36.pyc
+__pycache__/
