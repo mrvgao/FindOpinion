@@ -1,14 +1,15 @@
 from corenlp_utils import get_pos_tag, find_person_entities
 from functools import reduce
 
-spoken_clost_words = {}
+spoken_closet_words = {}
 
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
 
 with open('data/spoken_close_words.txt', encoding='utf-8') as f:
     for line in f:
         w, p = line.split()
-        spoken_clost_words[w] = float(p)
+        if w.startswith('#'):continue
+        spoken_closet_words[w] = float(p)
 
 
 def is_spoken_word(word, pos, clost_dict):
@@ -24,7 +25,7 @@ def locate_person_and_spoken_verb(article, output_format='list'):
 
     words = []
     for w, tag in pos_tag:
-        if is_spoken_word(w, tag, spoken_clost_words):
+        if is_spoken_word(w, tag, spoken_closet_words):
             words.append((w, 'V'))
         elif w in persons or tag == 'NR' and w not in self_excluded_entities:
             words.append((w, 'E'))
@@ -238,6 +239,7 @@ def find_s_v_structure(words_and_tags, direction='right'):
 
         if t in target_structure:
             find_structure = append_word(t, find_structure)
+            # TODO find subject is wrong here, need use
             if t == 'E': entity_records.append(w)
             if t == 'V': verb = w
             if find_structure[len(find_structure)-1] != target_structure[len(find_structure)-1]:
@@ -313,9 +315,9 @@ def get_an_article_speech(article):
 
 
 def calculate_confidence(results):
-    max_pro_verb = max(spoken_clost_words.values())
+    max_pro_verb = max(spoken_closet_words.values())
 
-    def confidence(verb): return spoken_clost_words[verb] / max_pro_verb
+    def confidence(verb): return spoken_closet_words[verb] / max_pro_verb
 
     return [
         (name, verb, speech, confidence(verb))
