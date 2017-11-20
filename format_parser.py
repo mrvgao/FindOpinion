@@ -8,6 +8,7 @@ self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', enco
 
 with open('data/spoken_close_words.txt', encoding='utf-8') as f:
     for line in f:
+        if line.startswith('#'): continue
         w, p = line.split()
         spoken_clost_words[w] = float(p)
 
@@ -290,7 +291,7 @@ def find_quote_subject(words_and_tags):
     return words_and_tags
 
 
-def get_an_article_speech(article):
+def get_an_article_speech(article, verbose=False):
     entities_and_verbs = locate_person_and_spoken_verb(article)
     o_v_format = find_object_speak_format(entities_and_verbs)
 
@@ -309,8 +310,8 @@ def get_an_article_speech(article):
 
     results = calculate_confidence(results)
 
-    for r in results:
-        print(r)
+    if verbose:
+        for r in results: print(r)
 
     return results
 
