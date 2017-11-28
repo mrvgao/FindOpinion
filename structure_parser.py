@@ -20,7 +20,7 @@ def find_subject(text, predict=None, verbose=False):
 
     # if ('aux:asp', predict, *) in results
     if list(filter(lambda r_p__: r_p__[0] == auxiliarity and r_p__[1] == predict, results)):
-        return None
+       return None
     elif predict:
         return [e for e in results if e[1] in predict]
     else:
