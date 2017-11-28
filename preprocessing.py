@@ -2,9 +2,10 @@
 Pro-precessing text into sentences. And replace the stop words in quotes.
 """
 import re
+from utils import get_article_random
 
 
-def split_to_sentence(line, need_get_substring=True):
+def split_to_sentence(line, need_get_substring=False):
     line = change_text_english(line)
     hidden_marks = r"""[\u3000\xa0@▌]"""
     line = re.compile(hidden_marks).sub("", line)
@@ -29,6 +30,7 @@ def split_to_sentence(line, need_get_substring=True):
 
 
 def change_text_english(text):
+    text = str(text)
     if len(text) <= 1:
         return text
 
@@ -119,4 +121,7 @@ def replace_in_quote_end_mark(string, end_marks):
 
 
 if __name__ == '__main__':
-    pass
+    articles = get_article_random(10)
+
+    for a in articles:
+        print(split_to_sentence(a, need_get_substring=False))

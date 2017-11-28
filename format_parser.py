@@ -3,15 +3,8 @@ from functools import reduce
 from itertools import product
 import structure_parser
 
-spoken_closet_words = {}
 
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
-
-with open('data/spoken_close_words.txt', encoding='utf-8') as f:
-    for line in f:
-        w, p = line.split()
-        if w.startswith('#'):continue
-        spoken_closet_words[w] = float(p)
 
 
 def locate_person_and_spoken_verb(article, output_format='list'):
