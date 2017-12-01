@@ -2,15 +2,11 @@ from corenlp_utils import get_pos_tag, find_person_entities
 from functools import reduce
 from itertools import product
 import structure_parser
+from utils import get_spoken_closet_words
 
 
+spoken_closet_words = get_spoken_closet_words()
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
-
-with open('data/spoken_close_words.txt', encoding='utf-8') as f:
-    for line in f:
-        if line.startswith('#'): continue
-        w, p = line.split()
-        spoken_clost_words[w] = float(p)
 
 
 def is_spoken_word(word, pos, clost_dict):
@@ -327,21 +323,21 @@ def get_an_article_speech(article, verbose=False):
     return results
 
 
-def remove_not_predicate_words(results):
-    """
-    Some string like "表示了复杂的心情"， 等并不是表示态度的。 所以需要过滤掉。
-    过滤的时候， 用的是Dependency paring的方式。
-    :param results:
-    :return:
-    """
-
-    def find_spoker(string, predicate):
-        subjects = find_subject(string, predicate)
-        return subjects[0][2] if subjects else None
-
-    results = filter(lambda s_p_o: find_spoker("".join(s_p_o), s_p_o[1]) is not None, results)
-
-    return results
+# def remove_not_predicate_words(results):
+#     """
+#     Some string like "表示了复杂的心情"， 等并不是表示态度的。 所以需要过滤掉。
+#     过滤的时候， 用的是Dependency paring的方式。
+#     :param results:
+#     :return:
+#     """
+#
+#     def find_spoker(string, predicate):
+#         subjects = find_subject(string, predicate)
+#         return subjects[0][2] if subjects else None
+#
+#     results = filter(lambda s_p_o: find_spoker("".join(s_p_o), s_p_o[1]) is not None, results)
+#
+#     return results
 
 
 def calculate_confidence(results):

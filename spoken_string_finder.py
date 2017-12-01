@@ -10,6 +10,7 @@ from itertools import repeat
 from structure_parser import find_nsubj_subject
 from functools import lru_cache
 import re
+from format_parser import calculate_confidence
 
 
 close_words = get_spoken_closet_words()
@@ -52,6 +53,8 @@ def filter_one_spoken_string(strings):
     strings = [(sub, p, extract_spoken_content(string)) for sub, p, string in strings
                if extract_spoken_content(string) is not None]
 
+    strings = [(sub, p, delete_news_begin(string)) for sub, p, string in strings]
+
     return strings
 
 
@@ -74,7 +77,7 @@ def extract_spoken_content(string):
 
         first_char_index_threshold = 3
         if first_unchar_index <= first_char_index_threshold:
-            content = content[first_unchar_index:]
+            content = content[first_unchar_index+1:]
 
     content_length_threshold = 5
     if len(content) > content_length_threshold:
@@ -153,6 +156,13 @@ def add_sub_and_predicate(string):
     return string
 
 
+def delete_news_begin(string):
+    comma = '，'
+    if comma in string and string[:string.index(comma)].find('新闻') >= 0:
+        string = string[string.index(comma)+1:]
+    return string
+
+
 def random_generator(size=10):
     L = range(size)
     for l in repeat(L):
@@ -164,11 +174,15 @@ def opinion_extract(text):
     return filter_one_spoken_string(get_spoken_strings(text))
 
 
+def get_a_article_speech(text):
+    return calculate_confidence(opinion_extract(text))
+
+
 if __name__ == '__main__':
     size = 50
     articles = get_article_random(size=size, dependancy_injection=random_generator(size=size))
 
     for a in articles:
-        strings = opinion_extract(a)
+        strings = get_a_article_speech(a)
         for s in strings:
             print(s)
