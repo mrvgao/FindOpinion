@@ -1,5 +1,5 @@
 from bottle import post, run, request
-from format_parser import get_an_article_speech
+from spoken_string_finder import get_an_article_speech
 
 
 @post('/quotes/')

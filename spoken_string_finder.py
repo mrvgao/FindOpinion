@@ -174,7 +174,7 @@ def opinion_extract(text):
     return filter_one_spoken_string(get_spoken_strings(text))
 
 
-def get_a_article_speech(text):
+def get_an_article_speech(text):
     return calculate_confidence(opinion_extract(text))
 
 
@@ -183,6 +183,6 @@ if __name__ == '__main__':
     articles = get_article_random(size=size, dependancy_injection=random_generator(size=size))
 
     for a in articles:
-        strings = get_a_article_speech(a)
+        strings = get_an_article_speech(a)
         for s in strings:
             print(s)
