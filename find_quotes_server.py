@@ -1,4 +1,4 @@
-from bottle import post, run, request
+from bottle import post, run, request, get
 from format_parser import get_an_article_speech
 
 
@@ -9,6 +9,11 @@ def get_article_quotes():
     result = format_http_return_value(result)
 
     return {'result': result}
+
+
+@get('/ok')
+def alive():
+    return {'status': 'okay'}
 
 
 def format_http_return_value(results):
