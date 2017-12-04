@@ -11,6 +11,11 @@ def get_article_quotes():
     return {'result': result}
 
 
+@get('/ok')
+def alive():
+    return {'status': 'okay'}
+
+
 def format_http_return_value(results):
     results = [
         {'entity': n, 'verb': v, 'speech': s, 'confidence': c} for n, v, s, c in results

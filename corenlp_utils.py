@@ -42,4 +42,3 @@ def get_text_dependency_parser_result(text, target_relations=[], verbose=False):
         results.append((r, entity_1, tokens[w2-1]))
 
     return results
-

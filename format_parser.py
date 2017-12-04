@@ -8,7 +8,6 @@ from utils import get_spoken_closet_words
 spoken_closet_words = get_spoken_closet_words()
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
 
-
 def is_spoken_word(word, pos, clost_dict):
     if pos.startswith('V') and word in clost_dict:
         return True
