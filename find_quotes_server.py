@@ -1,5 +1,8 @@
+import bottle
 from bottle import post, run, request, get
 from spoken_string_finder import get_an_article_speech
+
+bottle.BaseRequest.MEMFILE_MAX = 1024 * 1024
 
 
 @post('/quotes/')
@@ -25,4 +28,3 @@ def format_http_return_value(results):
 
 
 run(host='0.0.0.0', port=8080, reloader=True)
-
