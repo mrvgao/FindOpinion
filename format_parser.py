@@ -345,8 +345,8 @@ def calculate_confidence(results):
     def confidence(verb): return spoken_closet_words[verb] / max_pro_verb
 
     return [
-        (name, verb, speech, confidence(verb))
-        for name, verb, speech in results
+        (name, verb, speech, string, confidence(verb))
+        for name, verb, speech, string in results
     ]
 
 

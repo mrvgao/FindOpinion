@@ -1,17 +1,19 @@
 import pandas as pd
 import random
 
-content = pd.read_csv('data/zhaiyao-100days-format.csv', encoding='utf-8')
+default_file_name = 'data/zhaiyao-100days-format.csv'
+default_encoding = 'utf-8'
 
 
-def get_article_random(size=10, dependancy_injection=None):
+def get_article_random(file_name=default_file_name, encoding=default_encoding, size=None, dependancy_injection=None):
+    content = pd.read_csv(file_name, encoding=encoding)
     results = []
     for r in content.iterrows():
-        if dependancy_injection:
-            random.seed(next(dependancy_injection))
-        if random.random() < 0.7: continue
+        # if dependancy_injection:
+        #     random.seed(next(dependancy_injection))
+        # if random.random() < 0.7: continue
         results.append(r[1].content)
-        if len(results) >= size: break
+        if size is not None and len(results) >= size: break
     return results
 
 
