@@ -11,3 +11,5 @@ __pycache__/corenlp_utils.cpython-36.pyc __pycache__/format_parser.cpython-36.py
 __pycache__/
 data/Deep Learning with Keras.pdf
 .DS_Store
+fenfa_all.csv
+opinion_set.csv
