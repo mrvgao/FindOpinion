@@ -58,7 +58,7 @@ $ python find_quotes_server.py
 
 ## TO DO LIST
 
-+ [ ] Dependency Parser
++ [X] Dependency Parser
 + [ ] Multiply Segments Speech
 + [ ] Coreference Resolution
 
