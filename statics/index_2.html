@@ -9,11 +9,12 @@
 		<script src="https://unpkg.com/jquery@3.2.1/dist/jquery.min.js"></script>
 
 		<!-- highlight-within-textarea CSS/JS -->
-		<link href="/static/jquery.highlight-within-textarea.css" rel="stylesheet">
+        <link href="/static/jquery.highlight-within-textarea.css" rel="stylesheet">
 		<script src="/static/jquery.highlight-within-textarea.js"></script>
 
 		<!-- custom styles for highlight-within-textarea -->
-		<link rel="stylesheet" type="text/css"  href="/static/css/bootstrap.css">
+		<link href="https://cdn.bootcss.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" rel="stylesheet">
+		<!--<link rel="stylesheet" type="text/css"  href="/statics/bootstrap.css">-->
 		<style>
 			.hwt-container {
 				background-color: #f8f9fa;
@@ -151,14 +152,14 @@
                     var predicate = result[i].verb;
                     var speech = result[i].speech;
 
-                    highlight_seqeuence.push({
-						'highlight': person,
-						'className': 'blue',
-					});
-                    highlight_seqeuence.push({
-						'highlight': predicate,
-						'className': 'red',
-					});
+//                    highlight_seqeuence.push({
+//						'highlight': person,
+//						'className': 'blue',
+//					});
+//                    highlight_seqeuence.push({
+//						'highlight': predicate,
+//						'className': 'red',
+//					});
 
 					for(var ii in speech){
                         highlight_seqeuence.push({

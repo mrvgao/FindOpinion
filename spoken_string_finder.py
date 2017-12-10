@@ -92,7 +92,8 @@ def extract_quote_line_by_line(strings):
     strings = [(sub, p, extract_spoken_content(string, p), string) for sub, p, string in strings
                if extract_spoken_content(string, p) is not None]
     strings = [(sub, p, delete_news_begin(content), string) for sub, p, content, string in strings]
-    strings = [(sub, p, delete_end_none_characters(content), string) for sub, p, content, string in strings]
+    strings = [(sub, p, delete_end_none_characters(content), delete_end_none_characters(delete_news_begin(string)))
+               for sub, p, content, string in strings]
     strings = calculate_confidence(strings)
 
     return strings
@@ -193,7 +194,7 @@ def calculate_confidence(results):
     def confidence(verb): return close_words[verb] / max_pro_verb
 
     return [
-        (name, verb, speech, confidence(verb))
+        (name, verb, speech, string.replace('.', '。'), confidence(verb))
         for name, verb, speech, string in results
     ]
 

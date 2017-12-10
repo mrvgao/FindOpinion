@@ -22,7 +22,7 @@ def alive():
 
 def format_http_return_value(results):
     results = [
-        {'entity': n, 'verb': v, 'speech': s.split(' '), 'confidence': c} for n, v, s, c in results
+        {'entity': n, 'verb': v, 'speech': original.split(' '), 'confidence': c} for n, v, s, original, c in results
     ]
 
     return results
