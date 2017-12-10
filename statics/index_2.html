@@ -1,0 +1,214 @@
+
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Highlight Within Textarea</title>
+
+		<script src="https://unpkg.com/jquery@3.2.1/dist/jquery.min.js"></script>
+
+		<!-- highlight-within-textarea CSS/JS -->
+		<link href="/static/jquery.highlight-within-textarea.css" rel="stylesheet">
+		<script src="/static/jquery.highlight-within-textarea.js"></script>
+
+		<!-- custom styles for highlight-within-textarea -->
+		<link rel="stylesheet" type="text/css"  href="/static/css/bootstrap.css">
+		<style>
+			.hwt-container {
+				background-color: #f8f9fa;
+			}
+
+			.hwt-content {
+				width: 760px;
+				height: 400px;
+				padding: 20px;
+				border: 1px solid #adb5bd;
+				color: inherit;
+				font: 18px/25px 'Droid Sans Mono', sans-serif;
+			}
+
+			.hwt-input:focus {
+				outline-color: #495057;
+			}
+
+			.hwt-content mark {
+				border-radius: 3px;
+				background-color: #d0bfff;
+			}
+
+			.hwt-content mark.red {
+				background-color: #ffc9c9;
+			}
+
+			.hwt-content mark.blue {
+				background-color: #a3daff;
+			}
+
+			.hwt-content mark.yellow {
+				background-color: #ffec99;
+			}
+		</style>
+
+		<!-- general styles to make this page look decent -->
+		<style>
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				max-width: 800px;
+				margin: 40px auto;
+				padding: 0 20px;
+				font: 18px/1.4 'Open Sans', sans-serif;
+				color: #495057;
+				background-color: #f1f3f5;
+			}
+
+			/*a {*/
+				/*display: inline-block;*/
+				/*margin-bottom: 5px;*/
+				/*padding: 10px 30px;*/
+				/*border-radius: 5px;*/
+				/*color: #f8f9fa;*/
+				/*background-color: #495057;*/
+				/*text-decoration: none;*/
+			/*}*/
+/**/
+			section {
+				margin-top: 60px;
+			}
+
+			/*code {*/
+				/*padding: 0 5px;*/
+				/*font-family: 'Droid Sans Mono', sans-serif;*/
+				/*font-size: 16px;*/
+				/*background-color: #dee2e6;*/
+			/*}*/
+
+			/*script {*/
+				/*display: block;*/
+				/*margin-top: 10px;*/
+				/*padding-left: 15px;*/
+				/*border-left: 5px solid #adb5bd;*/
+				/*background-color: #e9ecef;*/
+				/*white-space: pre-wrap;*/
+				/*font: 14px/1.5 'Droid Sans Mono', sans-serif;*/
+			/*}*/
+			.btn-default {
+				color: #fcf8e3;
+				background-color: #33beea;
+				border-color: #cccccc03;
+				margin-left: 680px;
+			}
+		</style>
+        <script>
+            function hightlight_text(highlights) {
+                $('#text').highlightWithinTextarea({
+                    highlight: highlights
+                });
+            }
+		</script>
+	</head>
+	<body>
+	<h1>人物言论提取效果展示</h1>
+	<p>能够自动提取文章人物言论、观点, powered-by @新华智云</p>
+
+	<section>
+		<textarea class="class-example" rows="20" id="text" name="text">示例： 爱因斯坦告诉大家， 想象力比知识更重要。
+		</textarea>
+		<button type="button" class="btn btn-default" name="submit" id="submit">提取言论</button>
+		<script>
+            hightlight_text([
+				{highlight: '爱因斯坦', className: 'red'},
+                {highlight: '告诉', className: 'blue'},
+                {highlight: '想象力比知识更重要', className: 'yellow'},
+			]);
+		</script>
+	</section>
+	</body>
+	<script>
+
+        function print(err, result, text) {
+            if(err){
+                console.log();
+                $('#text').html(err);
+            }else{
+                console.log('enter success!');
+
+//            console.log(result.toString());
+//            result = JSON.parse(result);
+                var string = "";
+
+                result = result.result
+
+                $('#text').val(text);
+
+				var highlight_seqeuence = []
+                for(var i = 0; i < result.length; i++){
+
+                    var person = result[i].entity;
+                    var predicate = result[i].verb;
+                    var speech = result[i].speech;
+
+                    highlight_seqeuence.push({
+						'highlight': person,
+						'className': 'blue',
+					});
+                    highlight_seqeuence.push({
+						'highlight': predicate,
+						'className': 'red',
+					});
+
+					for(var ii in speech){
+                        highlight_seqeuence.push({
+                            'highlight': speech[ii],
+                            'className': 'yellow',
+                        });
+					}
+
+                    console.log('-----------------------');
+                    console.log(person);
+                    console.log(predicate);
+                    console.log(speech);
+                    hightlight_text(highlight_seqeuence);
+                }
+
+            }
+
+        }
+        function request(content) {
+            console.log('enter request!');
+            $.post({
+                url: 'quotes/',
+                data: {
+                    content: content,
+                },
+                dataType: 'json',
+                success: function(result) {
+                    if (result) {
+                        print(null, result, content)
+                    } else {
+                        print(result)
+                    }
+                },
+                error: function() {
+                    print('请求接口失败')
+                }
+            })
+        }
+        function submit() {
+            var text = $("#text").val()
+//        var content = $("#content").val()
+            $("#text").val("已经提交， 请稍等");
+            request(text)
+        }
+
+        $("#submit").click(function(e) {
+            console.log('click submit!');
+            e.preventDefault();
+            submit()
+        })
+	</script>
+	发现问题? 联系作者 <a href="mailto:minchiuan.gao@gmail.com">report a bug</a>
+</html>

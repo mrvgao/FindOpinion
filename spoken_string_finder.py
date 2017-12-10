@@ -7,68 +7,115 @@ from preprocessing import split_to_sentence
 from utils import get_article_random
 from utils import get_spoken_closet_words
 from itertools import repeat
-from structure_parser import find_nsubj_subject
+# from structure_parser import find_nsubj_subject
 from functools import lru_cache
 import re
-from format_parser import calculate_confidence
 import csv
 from tqdm import tqdm
+from pyltp_parser import get_dparser_from_ltp
 
 
 close_words = get_spoken_closet_words()
 
 
-@lru_cache(maxsize=256)
-def get_spoken_strings(article):
-    results = []
-
+def is_spoken_verb(w, tag, after_tag='n'):
+    # w the current word
+    # tag the current word's tag
+    # the tag of the after this word
     def is_special_char(c):
         return c.startswith('v') or c.startswith('p')
+
+    if w in close_words and is_special_char(tag) and not after_tag.startswith('u'):
+        return True
+    return False
+
+
+@lru_cache(maxsize=256)
+def get_strings_with_spoken_format(article):
+    results = []
 
     shortest_spoken_length = 5
     for sentence in split_to_sentence(article):
         cut_string = list(map(tuple, cut(sentence)))
         for i in range(len(cut_string)-1):
-            if cut_string[i][0] in close_words and is_special_char(cut_string[i][1]) \
-               and not cut_string[i+1][1].startswith('u'):
+            if is_spoken_verb(cut_string[i][0], cut_string[i][1], cut_string[i+1][1]):
                 if len(cut_string) - i > shortest_spoken_length:
                     results.append((cut_string[i][0], i, sentence))
                     break
     return results
 
 
-def filter_one_spoken_string(strings):
+def char_index_is_in_quotes(char_index, string):
+    left_quote = '“'
+    right_quotes = '”'
+
+    char_index_to_left = char_index
+    char_index_to_right = char_index
+
+    while char_index_to_left >= 0:
+        if string[char_index_to_left] == left_quote:
+            return True
+        if string[char_index_to_right] == right_quotes:
+            break
+        char_index_to_left -= 1
+
+    while char_index_to_right <= len(string) - 1:
+        if string[char_index_to_right] == right_quotes:
+            return True
+        if string[char_index_to_right] == left_quote:
+            break
+        char_index_to_right += 1
+    return False
+
+
+def extract_quote_line_by_line(strings):
+
     def get_spoken_v_num(s):
         postags = list(map(tuple, cut(s)))
         spoken_v_num = 0
-        for w, t in postags:
-            if t.startswith('v') and w in close_words:
+        char_index = 0
+        for i, w_t in enumerate(postags[:-1]):
+            w, t = w_t
+            if is_spoken_verb(w, t, postags[i+1][1]) and not char_index_is_in_quotes(char_index, s):
                 spoken_v_num += 1
+            char_index += len(w)
         return spoken_v_num
 
     strings = [s for v, n, s in strings]
-    strings = [s for s in strings if get_spoken_v_num(s) == 1]
-    strings = [s for s in strings if exist_person(s)]
-    strings = [add_sub_and_predicate(s) for s in strings]
-    strings = filter(lambda x: x is not None, strings)
-    strings = [(sub, p, extract_spoken_content(string), string) for sub, p, string in strings
-               if extract_spoken_content(string) is not None]
+    strings = [s for s in strings if get_spoken_v_num(s) > 0]
+    strings = [(get_exist_persons(s), s) for s in strings]
+    # strings = [s for s in strings if exist_person(s)]
+    # strings = [add_sub_and_predicate(s) for s in strings]
+    strings = [(entities, s) for entities, s in strings if len(entities) > 0]
+    strings = [(get_entity_and_verb_from_ltp(s, tuple(entities)), s) for entities, s in strings if len(entities) > 0]
+    strings = [(subj_pred[-1][0], subj_pred[-1][1], s) for subj_pred, s in strings if len(subj_pred) > 0]
+    strings = [(sub, p, extract_spoken_content(string, p), string) for sub, p, string in strings
+               if extract_spoken_content(string, p) is not None]
     strings = [(sub, p, delete_news_begin(content), string) for sub, p, content, string in strings]
-
+    strings = [(sub, p, delete_end_none_characters(content), string) for sub, p, content, string in strings]
     strings = calculate_confidence(strings)
 
     return strings
 
 
+def delete_end_none_characters(string):
+    string = string[::-1]
+    for ii, c in enumerate(string):
+        if str(c).isalpha(): break
+
+    string = string[ii:][::-1]
+    return string
+
+
 @lru_cache(maxsize=256)
-def extract_spoken_content(string):
+def extract_spoken_content(string, predicate):
     quoted_string = get_quoted_string(string)
     quoted_string_threshold = 10
     if len(quoted_string) > quoted_string_threshold:
         content = quoted_string
     else:
-        _, p = get_subject_and_predicate_of_speak(string)
-        content = string[string.index(p) + len(p):]
+        # _, p = get_subject_and_predicate_of_speak(string)
+        content = string[string.index(predicate) + len(predicate):]
 
         first_unchar_index = len(content)
 
@@ -104,6 +151,14 @@ def exist_person(string):
 
 
 @lru_cache(maxsize=256)
+def get_exist_persons(string):
+    entities = []
+    for w, t in list(map(tuple, cut(string))):
+        if t.startswith('nr'): entities.append(w)
+    return entities
+
+
+@lru_cache(maxsize=256)
 def get_quoted_string(string):
     return " ".join(re.findall(r'“(.*?)”', string))
 
@@ -132,31 +187,65 @@ def remove_content_between_p_and_spoken_verb(string):
     return "".join(words)
 
 
+def calculate_confidence(results):
+    max_pro_verb = max(close_words.values())
+
+    def confidence(verb): return close_words[verb] / max_pro_verb
+
+    return [
+        (name, verb, speech, confidence(verb))
+        for name, verb, speech, string in results
+    ]
+
+
+# @lru_cache(maxsize=256)
+# def get_subject_and_predicate_of_speak(string):
+#     tags, words = get_string_postags(string)
+#     nsubj_parse_results = find_nsubj_subject(string)
+#     print(list(zip(tags, words)))
+#     print(nsubj_parse_results)
+#
+#     def merge_noun(word, tag, words, tags):
+#         if tag.startswith('n'):
+#             pass
+#
+#     for r in nsubj_parse_results:
+#         _, p, w = r
+#         if p in words and is_spoken_verb(p, tags[words.index(p)]) and tags[words.index(w)].startswith('nr'):
+#                 return w, p
+#     return None
+
+
+# @lru_cache(maxsize=256)
+# def add_sub_and_predicate(string):
+#     string = remove_content_between_p_and_spoken_verb(string)
+    # sub_pred = get_subject_and_predicate_of_speak(string)
+    # if sub_pred:
+    #     sub, pred = sub_pred
+    #     string = (sub, pred, string)
+    # else:
+    #     string = None
+    #
+    # return string
+#
+
 @lru_cache(maxsize=256)
-def get_subject_and_predicate_of_speak(string):
+def get_entity_and_verb_from_ltp(string, entities):
     tags, words = get_string_postags(string)
-    nsubj_parse_results = find_nsubj_subject(string)
-    # print(nsubj_parse_results)
 
-    for r in nsubj_parse_results:
-        _, p, w = r
-        if p in words and tags[words.index(p)].startswith('v') and p in close_words and w in words and \
-            tags[words.index(w)].startswith('nr'):
-                return w, p
-    return None
+    results = get_dparser_from_ltp(words)
 
+    nsubj = []
+    for w1, w2, ii1, ii2, relation in results:
+        if relation != 'SBV': continue
 
-@lru_cache(maxsize=256)
-def add_sub_and_predicate(string):
-    # string = remove_content_between_p_and_spoken_verb(string)
-    sub_pred = get_subject_and_predicate_of_speak(string)
-    if sub_pred:
-        sub, pred = sub_pred
-        string = (sub, pred, string)
-    else:
-        string = None
+        if ii2 + 1 < len(tags): after_tag = tags[ii2 + 1]
+        else: after_tag = 'n'
 
-    return string
+        if w1 in entities and is_spoken_verb(w2, tags[ii2], after_tag):
+            nsubj.append((w1, w2))
+
+    return nsubj
 
 
 def delete_news_begin(string):
@@ -180,7 +269,7 @@ def pre_processing(text):
 
 def opinion_extract(text):
     text = pre_processing(text)
-    return filter_one_spoken_string(get_spoken_strings(text))
+    return extract_quote_line_by_line(get_strings_with_spoken_format(text))
 
 
 def get_an_article_speech(text):
@@ -188,44 +277,52 @@ def get_an_article_speech(text):
 
 
 if __name__ == '__main__':
-    size = None
-    articles = get_article_random(file_name='~/Workspace/Lecture/data/sqlResult_1558435.csv',
-                                  encoding='gb18030',
-                                  size=None, dependancy_injection=None)
+    # print('hello')
+    # size = 100
+    # articles = get_article_random(file_name='~/Workspace/Lecture/data/sqlResult_1558435.csv',
+    #                               encoding='gb18030',
+    #                               size=None, dependancy_injection=None)
 
-    # text = """盘和林财政部中国财政科学研究院应用经济学博士后
-# 　　“中共十九大制定了新时代中国特色社会主义的行动纲领和发展蓝图，提出要建设网络强国、数字中国、智慧社会，推动互联网、大数据、人工智能和实体经济深度融合，发展数字经济、共享经济，培育新增长点、形成新动能。”中国国家主席习近平在致第四届世界互联网大会的贺信中说，中国数字经济发展将进入快车道。
-# 　　作为在中共十九大之后，中国召开的一次重要的国际性会议，第四届世界互联网大会备受世人瞩目。
-# 　　之所以受到世界瞩目一个更为重要的原因是，中国作为一个网络大国，在数字经济发展中取得了惊人的成绩；中国数字经济发展将进入快车道，世界各国以及互联网巨头都希望与中国共商互联网的国际合作，甚至是未来互联网全球治理等话题。
-# 　　数字经济又称为信息经济，是数字化、网络化、智能化的时效经济。数字经济是以网络为载体，以数字化的知识与信息为生产要素，以智能制造为动能，以大数据在线模式为物联平台，以分享经济为方向的经济模式。
-# 　　当今世界正在经历一场革命性的变化。当今最具影响力的社会思想家之一托夫勒认为，第三次浪潮是信息革命。信息革命也就是数字革命，指由于信息生产、处理手段的高度发展而导致的社会生产力、生产关系的变革，被视为第四次工业革命。可以说是人类有史以来最为迅速、广泛、深刻的变化。
-# 　　毫不夸张地说，数字经济是现代经济的绝对主角，在经济社会中如工业生产、人们的衣食住行等都广泛融入了信息技术，使得人类活动各方面表现出信息活动的特征。因此，数字经济发展水平已经成为衡量各国综合国力的重要标准之一，以信息技术为代表的高新技术突飞猛进，以信息化和信息产业发展水平为主要特征的综合国力竞争日趋激烈。
-# 　　习近平主席高度重视数字经济发展，多次就信息经济、网络经济发表重要论述，明确指出信息化和经济全球化要相互促进。在3月5日召开的十二届全国人大五次会议上，“数字经济”首次被写入政府工作报告。
-# 　　数字经济已经成为我国经济增长的重要驱动力。中国信息化百人会2016年出版的《信息经济崛起：区域发展模式、路径与动力》一书提出，1996年—2014年中国信息经济年均增速高达23.79%，远远高于同期GDP年均增速；2016年我国数字经济规模已达到22.4万亿元人民币，占GDP比重达到30.1%；信息经济正在成为国民经济稳定增长的主要引擎。
-# 　　近年来，我国数字经济快速发展，其增速远远快于中美日英等全球主要国家数字经济的增速。根据中国信息通信研究院测算，2016年我国数字经济增速高达16.6%，分别是美国（6.8%）、日本（5.5%）和英国（5.4%）的2.4倍、3.0倍、3.1倍。
-# 　　企业强则中国强。具有国际竞争力的企业是一个国家和地区经济实力的象征，企业在某一行业的国际竞争力也代表着一个国家和地区在该行业的影响力和实力。阿里巴巴、腾讯、百度、蚂蚁金服、小米、京东、滴滴出行等7家企业位居全球互联网企业20强，充分说明中国企业在数字经济领域走在了世界前列。
-# 　　今年双11全球狂欢节闭幕，毫无悬念再创新高，全天成交额再次刷新纪录达到1682亿元，无线成交占比90%，全天支付总笔数达到14.8亿，全天物流订单达8.12亿，交易覆盖全球225个国家和地区。显然这并不是一场简单拼价格的购物节，背后所代表的新零售、新消费、人工智能、大数据、移动支付等，都是数据经济发展的结晶。正如英国广播公司BBC对天猫双11的总结：“中国已经不再是跟随者，而是世界电商和用户体验的领头羊。当午夜的钟声敲响的时候，世界应该看到，中国已经前行了多远。”
-# 　　中国拥有世界上最多的网民和移动网民，拥有智能手机最大规模的群体，加上融合创新的精神以及开放包容的心态，中国已经深深融入了世界互联网各个领域。从人均信息消费来看，目前只有300美元左右，而《国家信息化发展战略纲要》要求2020年人均信息消费约700美元，可谓前景广阔、潜力巨大。
-# 　　习近平主席在贺信中提出的“推动世界各国共同搭乘互联网和数字经济发展的快车”，本次大会提出“发展共同推进、安全共同维护、治理共同参与、成果共同分享”，因此，我们有理由相信，中国数字经济发展将进入快车道，不仅是中国经济之福，也为世界经济发展注入强大动力。["""
-#
-#     articles = [text]
+    text = """
+    第四届世界互联网大会闭幕：中国的数字经济发展将进入快车道
+　　央视网消息：中国的数字经济发展将进入快车道，这是本届世界互联网大会的一个热门话题。
+　　在4日召开的“数字丝绸之路”国际合作论坛上，专家首次提出要参与制定国际数字贸易标准，作为数字经济的核心，数字贸易的标准制定，对于我国数字经济的发展能带来什么？对于中国企业走向海外又会有哪些帮助呢？
+　　4日，由中国人民外交学会主办的“数字丝绸之路”国际合作论坛在乌镇会展中心举行，本次论坛以“跨境电商，共享繁荣”为议题，有来自国内外的多名专家和互联网企业家共同讨论。
+
+
+中国人民大学国际关系学院教授王义桅
+　　中国人民大学国际关系学院教授王义桅：中国是数字经济发展最为迅猛的一个国家，我们有7.5亿网民，我们的电子商务占美国、日本，还有欧洲他们总和还要多，我们现在在创造数字经济的一个模式。
+　　根据统计，目前有超过12%的全球跨境实物贸易通过数字平台完成，50%的跨境服务贸易以数字化的形式实现，其中跨境电商平台起到了非常重要的桥梁作用，而我国在跨境电商领域也已经走在世界的最前列，在论坛上专家和互联网企业家指出，我国正在从跨境电商进化到数字贸易时代。
+
+
+敦煌网首席执行官王树彤
+　　敦煌网首席执行官王树彤：我们今天看到由消费互联网在迈向产业互联网，我觉得这个已经是全球的一个趋势。所以未来的贸易，主流应该是数字贸易。电子商务也好，数字贸易也好，是一个前所未有的机会，能够让中小企业以低门槛的方式，能够进入到全球市场。
+　　专家指出，美国在数字产品及贸易领域占据全球竞争优势，在相关规则制定方面也处于引领地位，但由于数字产品本身的复杂性和快速发展，很多领域不仅没有定论，也存在很多值得探讨和谈判的空间。所以，中国必须要在将来的数字贸易标准制定中起到重要的作用。
+
+
+中国与全球化智库理事长王耀辉
+　　中国与全球化智库理事长王耀辉：如果说我们在这领域里面参与国际规则的制定，包括打造了全球治理的互联网数字贸易的新规则的话，对于推动中国未来的发展，包括落实习主席说的，共商共建共享，打造数字丝绸之路，会起到一个决定性的巨大作用。
+进入【新浪财经股吧】讨论
+    """
+    articles = [text]
 
     dataset = open('opinion_set.csv', 'a', encoding='utf-8')
     writer = csv.writer(dataset)
     writer.writerow(['string', 'predicate', 'subject', 'content'])
 
     index = 0
-    articles_bar = tqdm(articles)
+    articles_bar = articles
     for a in articles_bar:
 
         try:
             strings = get_an_article_speech(a)
         except AttributeError: continue
 
-        for subj, predicate, content, string, _ in strings:
-            writer.writerow([string, predicate, subj, content])
-            # print(index)
-            index += 1
-            articles_bar.update(0.1)
-            articles_bar.set_description('No: {}'.format(index), refresh=False)
-            articles_bar.set_postfix({'Subj': subj}, refresh=False)
+        for s in strings: print(s)
+        # for subj, predicate, content, string, _ in strings:
+        #     writer.writerow([string, predicate, subj, content])
+        #     print(index)
+            # index += 1
+            # articles_bar.update(0.1)
+            # articles_bar.set_description('No: {}'.format(index), refresh=False)
+            # articles_bar.set_postfix({'Subj': subj}, refresh=False)

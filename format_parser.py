@@ -8,6 +8,7 @@ from utils import get_spoken_closet_words
 spoken_closet_words = get_spoken_closet_words()
 self_excluded_entities = [e.strip() for e in open('data/not_is_entity.txt', encoding='utf-8')]
 
+
 def is_spoken_word(word, pos, clost_dict):
     if pos.startswith('V') and word in clost_dict:
         return True
@@ -337,17 +338,6 @@ def get_an_article_speech(article, verbose=False):
 #     results = filter(lambda s_p_o: find_spoker("".join(s_p_o), s_p_o[1]) is not None, results)
 #
 #     return results
-
-
-def calculate_confidence(results):
-    max_pro_verb = max(spoken_closet_words.values())
-
-    def confidence(verb): return spoken_closet_words[verb] / max_pro_verb
-
-    return [
-        (name, verb, speech, string, confidence(verb))
-        for name, verb, speech, string in results
-    ]
 
 
 if __name__ == '__main__':
