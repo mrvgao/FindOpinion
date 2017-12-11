@@ -13,6 +13,7 @@ import re
 import csv
 from tqdm import tqdm
 from pyltp_parser import get_dparser_from_ltp
+from self_defined_parser import nsubj_parser
 
 
 close_words = get_spoken_closet_words()
@@ -25,6 +26,8 @@ def is_spoken_verb(w, tag, after_tag='n'):
     def is_special_char(c):
         return c.startswith('v') or c.startswith('p')
 
+    colon = '：'
+    if w == colon: return True
     if w in close_words and is_special_char(tag) and not after_tag.startswith('u'):
         return True
     return False
@@ -68,7 +71,7 @@ def char_index_is_in_quotes(char_index, string):
     return False
 
 
-def extract_quote_line_by_line(strings, text):
+def extract_quote_line_by_line(strings):
 
     def get_spoken_v_num(s):
         postags = list(map(tuple, cut(s)))
@@ -82,7 +85,7 @@ def extract_quote_line_by_line(strings, text):
         return spoken_v_num
 
     strings = [s for v, n, s in strings]
-    strings = [s for s in strings if get_spoken_v_num(s) > 0]
+    # strings = [s for s in strings if get_spoken_v_num(s) > 0]
     strings = [(get_exist_persons(s), s) for s in strings]
     # strings = [s for s in strings if exist_person(s)]
     # strings = [add_sub_and_predicate(s) for s in strings]
@@ -94,7 +97,7 @@ def extract_quote_line_by_line(strings, text):
     strings = [(sub, p, delete_news_begin(content), string) for sub, p, content, string in strings]
     strings = [(sub, p, delete_end_none_characters(content), delete_end_none_characters(delete_news_begin(string)))
                for sub, p, content, string in strings]
-    strings = [(sub, p, content, recovery_from_colon(string, content, text)) for sub, p, content, string in strings]
+    strings = [(sub, p, content, recovery_from_colon(string, content)) for sub, p, content, string in strings]
     strings = calculate_confidence(strings)
 
     return strings
@@ -117,7 +120,9 @@ def extract_spoken_content(string, predicate):
         content = quoted_string
     else:
         # _, p = get_subject_and_predicate_of_speak(string)
-        content = string[string.index(predicate) + len(predicate):]
+        predicate = predicate[::-1]
+        predicate_index = len(string) - string[::-1].index(predicate)
+        content = string[predicate_index - 1 + len(predicate):]
 
         first_unchar_index = len(content)
 
@@ -250,6 +255,13 @@ def get_entity_and_verb_from_ltp(string, entities):
     return nsubj
 
 
+def get_subject_from_parse(string, entities):
+    nsubjs = get_entity_and_verb_from_ltp(string, entities)
+    if len(nsubjs) == 0:
+        nsubjs = nsubj_parser(string, entities)
+    return nsubjs
+
+
 def delete_news_begin(string):
     comma = '，'
     if comma in string and string[:string.index(comma)].find('新闻') >= 0:
@@ -265,27 +277,28 @@ def random_generator(size=10):
 
 
 def pre_processing(text):
-    colon = '：'
-    say = '说，'
-    text = text.replace(colon, say)
+    # colon = '：'
+    # say = '说，'
+    # text = text.replace(colon, say)
     return text
 
 
 def opinion_extract(text):
     text = pre_processing(text)
-    return extract_quote_line_by_line(get_strings_with_spoken_format(text), text)
+    return extract_quote_line_by_line(get_strings_with_spoken_format(text))
 
 
 def get_an_article_speech(text):
     return opinion_extract(text)
 
 
-def recovery_from_colon(original_string, spoken_content, text):
+def recovery_from_colon(original_string, spoken_content):
     say = '说，'
     colon = '：'
-    content_index = original_string.index(spoken_content)
-    if original_string[content_index - 2: content_index] == say:
-        original_string = original_string[: content_index -2] + colon + original_string[content_index:]
+    if spoken_content in original_string:
+        content_index = original_string.index(spoken_content)
+        if original_string[content_index - 2: content_index] == say:
+            original_string = original_string[: content_index -2] + colon + original_string[content_index:]
     return original_string
 
 
@@ -297,32 +310,17 @@ if __name__ == '__main__':
     #                               size=None, dependancy_injection=None)
 
     text = """
-    第四届世界互联网大会闭幕：中国的数字经济发展将进入快车道
-　　央视网消息：中国的数字经济发展将进入快车道，这是本届世界互联网大会的一个热门话题。
-　　在4日召开的“数字丝绸之路”国际合作论坛上，专家首次提出要参与制定国际数字贸易标准，作为数字经济的核心，数字贸易的标准制定，对于我国数字经济的发展能带来什么？对于中国企业走向海外又会有哪些帮助呢？
-　　4日，由中国人民外交学会主办的“数字丝绸之路”国际合作论坛在乌镇会展中心举行，本次论坛以“跨境电商，共享繁荣”为议题，有来自国内外的多名专家和互联网企业家共同讨论。
-
-
-中国人民大学国际关系学院教授王义桅
-　　中国人民大学国际关系学院教授王义桅：中国是数字经济发展最为迅猛的一个国家，我们有7.5亿网民，我们的电子商务占美国、日本，还有欧洲他们总和还要多，我们现在在创造数字经济的一个模式。
-　　根据统计，目前有超过12%的全球跨境实物贸易通过数字平台完成，50%的跨境服务贸易以数字化的形式实现，其中跨境电商平台起到了非常重要的桥梁作用，而我国在跨境电商领域也已经走在世界的最前列，在论坛上专家和互联网企业家指出，我国正在从跨境电商进化到数字贸易时代。
-
-
-敦煌网首席执行官王树彤
-　　敦煌网首席执行官王树彤：我们今天看到由消费互联网在迈向产业互联网，我觉得这个已经是全球的一个趋势。所以未来的贸易，主流应该是数字贸易。电子商务也好，数字贸易也好，是一个前所未有的机会，能够让中小企业以低门槛的方式，能够进入到全球市场。
-　　专家指出，美国在数字产品及贸易领域占据全球竞争优势，在相关规则制定方面也处于引领地位，但由于数字产品本身的复杂性和快速发展，很多领域不仅没有定论，也存在很多值得探讨和谈判的空间。所以，中国必须要在将来的数字贸易标准制定中起到重要的作用。
-
-
-中国与全球化智库理事长王耀辉
-　　中国与全球化智库理事长王耀辉：如果说我们在这领域里面参与国际规则的制定，包括打造了全球治理的互联网数字贸易的新规则的话，对于推动中国未来的发展，包括落实习主席说的，共商共建共享，打造数字丝绸之路，会起到一个决定性的巨大作用。
-进入【新浪财经股吧】讨论
+    （原标题： 习近平同布特弗利卡总统互致贺电庆祝阿尔及利亚一号通信卫星发射成功）
+新华社北京12月11日电 国家主席习近平12月11日同阿尔及利亚总统布特弗利卡互致贺电，祝贺阿尔及利亚一号通信卫星在西昌发射成功。
+习近平在贺电中指出，阿尔及利亚一号通信卫星项目是中阿全面战略伙伴关系的重要体现，开创了中国同阿拉伯国家开展航天领域合作的成功先例，将为推动阿尔及利亚经济发展、民生改善、社会进步发挥重要作用。明年是中阿两国建交60周年。中方愿同阿方一道努力，加强各领域交流合作，推动中阿全面战略伙伴关系深入发展，更好造福两国和两国人民。
+布特弗利卡在贺电中表示，阿尔及利亚一号通信卫星成功发射是阿中两国航天合作的重大成就，体现了双方深厚的传统友谊。阿方愿同中方共同推动各领域合作取得更多成果。
     """
     articles = [text]
 
-    dataset = open('opinion_set.csv', 'a', encoding='utf-8')
-    writer = csv.writer(dataset)
-    writer.writerow(['string', 'predicate', 'subject', 'content'])
-
+    # dataset = open('opinion_set.csv', 'a', encoding='utf-8')
+    # writer = csv.writer(dataset)
+    # writer.writerow(['string', 'predicate', 'subject', 'content'])
+    #
     index = 0
     articles_bar = articles
     for a in articles_bar:
