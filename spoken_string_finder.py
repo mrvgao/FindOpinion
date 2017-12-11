@@ -68,7 +68,7 @@ def char_index_is_in_quotes(char_index, string):
     return False
 
 
-def extract_quote_line_by_line(strings):
+def extract_quote_line_by_line(strings, text):
 
     def get_spoken_v_num(s):
         postags = list(map(tuple, cut(s)))
@@ -94,6 +94,7 @@ def extract_quote_line_by_line(strings):
     strings = [(sub, p, delete_news_begin(content), string) for sub, p, content, string in strings]
     strings = [(sub, p, delete_end_none_characters(content), delete_end_none_characters(delete_news_begin(string)))
                for sub, p, content, string in strings]
+    strings = [(sub, p, content, recovery_from_colon(string, content, text)) for sub, p, content, string in strings]
     strings = calculate_confidence(strings)
 
     return strings
@@ -264,17 +265,28 @@ def random_generator(size=10):
 
 
 def pre_processing(text):
-    text = text.replace('：', '说，')
+    colon = '：'
+    say = '说，'
+    text = text.replace(colon, say)
     return text
 
 
 def opinion_extract(text):
     text = pre_processing(text)
-    return extract_quote_line_by_line(get_strings_with_spoken_format(text))
+    return extract_quote_line_by_line(get_strings_with_spoken_format(text), text)
 
 
 def get_an_article_speech(text):
     return opinion_extract(text)
+
+
+def recovery_from_colon(original_string, spoken_content, text):
+    say = '说，'
+    colon = '：'
+    content_index = original_string.index(spoken_content)
+    if original_string[content_index - 2: content_index] == say:
+        original_string = original_string[: content_index -2] + colon + original_string[content_index:]
+    return original_string
 
 
 if __name__ == '__main__':
