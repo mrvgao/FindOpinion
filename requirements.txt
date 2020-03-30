@@ -1,7 +1,7 @@
 appnope==0.1.0
 backports.weakref==1.0rc1
 beautifulsoup4==4.5.3
-bleach==1.5.0
+bleach==3.1.4
 bosonnlp==0.9.0
 boto==2.48.0
 bottle==0.12.13
