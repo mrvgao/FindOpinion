@@ -71,7 +71,7 @@ psutil==5.2.1
 ptyprocess==0.5.2
 pycparser==2.18
 pyglet==1.2.4
-Pygments==2.2.0
+Pygments==2.7.4
 pygpu==0.7.1
 pyparsing==2.2.0
 pyrouge==0.1.3
