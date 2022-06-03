@@ -4,7 +4,7 @@ beautifulsoup4==4.5.3
 bleach==1.5.0
 bosonnlp==0.9.0
 boto==2.48.0
-bottle==0.12.13
+bottle==0.12.20
 bz2file==0.98
 certifi==2017.4.17
 cffi==1.10.0
