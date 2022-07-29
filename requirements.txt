@@ -45,7 +45,7 @@ Markdown==2.6.9
 MarkupSafe==1.0
 matplotlib==2.0.2
 memory-profiler==0.47
-mistune==0.7.4
+mistune==2.0.3
 mock==2.0.0
 msgpack-python==0.4.8
 MyApp==0.1
