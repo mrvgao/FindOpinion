@@ -49,7 +49,7 @@ mistune==0.7.4
 mock==2.0.0
 msgpack-python==0.4.8
 MyApp==0.1
-nbconvert==5.2.1
+nbconvert==6.3.0
 nbformat==4.3.0
 networkx==1.11
 nltk==3.4.5
