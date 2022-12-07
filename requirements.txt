@@ -6,7 +6,7 @@ bosonnlp==0.9.0
 boto==2.48.0
 bottle==0.12.13
 bz2file==0.98
-certifi==2017.4.17
+certifi==2022.12.7
 cffi==1.10.0
 chardet==3.0.4
 click==6.7
